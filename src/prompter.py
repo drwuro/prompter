@@ -297,7 +297,7 @@ def showError(msg):
     global error_message
     error_message = msg
     if msg:
-        print('ERROR: ', msg)
+        print('ERROR:', msg)
 
 
 def switchPage(pagename):
@@ -308,6 +308,28 @@ def switchPage(pagename):
         showError(None)
     else:
         showError('page %s not found' % pagename.strip())
+
+
+def nextPage():
+    global current_page
+    index = list(pages.keys()).index(current_page) +1
+
+    try:
+        pagename = pages.keys()[index]
+        switchPage(pagename)
+    except:
+        showError('already on last page')
+
+
+def prevPage():
+    global current_page
+    index = list(pages.keys()).index(current_page) -1
+
+    try:
+        pagename = pages.keys()[index]
+        switchPage(pagename)
+    except:
+        showError('already on first page')
         
 
 def getMousePos(e):        
@@ -491,8 +513,13 @@ try:
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     running = False
-                if e.key == pygame.K_SPACE:
+                if e.key in (pygame.K_SPACE, pygame.K_RIGHT):
                     nextPage()
+                if e.key == pygame.K_LEFT:
+                    prevPage()
+
+                if e.key == pygame.K_F11:
+                    pygame.display.toggle_fullscreen()
 
             elif e.type == pygame.MOUSEBUTTONUP:
                 xpos, ypos = getMousePos(e)
