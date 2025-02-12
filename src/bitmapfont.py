@@ -1,45 +1,46 @@
+#########################
+###
+### BitmapFont
+### by zeha@drwuro.com
+###
+### version 1.3 (2025)
+###
+#########################
+
 
 import pygame
 
 NUM_CHARS = 96
 TEXT_CACHING = True
-UPPERCASE_MODE = False
 
 
-class BitmapFont(object):
-    def __init__(self, filename, font_w=8, font_h=8, colors=None, zoom=1, scr_w=320, scr_h=240):
+class BitmapFont:
+    def __init__(self, filename, char_w=8, char_h=8, zoom=1, scr_w=320, scr_h=240):
         self.lastxpos, self.lastypos = 0, 0
 
-        self.font_w = font_w
-        self.font_h = font_h
-        
+        self.char_w = char_w
+        self.char_h = char_h
+
         self.scr_w = scr_w
         self.scr_h = scr_h
 
         self.fonts = {}
 
-        if not colors:
-            colors = [(0, 0, 0), (255, 255, 255)]
-
         self.lastcolor = (255, 255, 255)
 
-        for c in colors:
-            font = pygame.image.load(filename)
-            font = pygame.transform.scale(font, (font_w * NUM_CHARS * zoom, font_h * zoom))
-            font.fill(c, special_flags=pygame.BLEND_MULT)
-            self.fonts[c] = font
+        self.font = pygame.image.load(filename)
 
-        self.font_w *= zoom
-        self.font_h *= zoom
+        self.char_w *= zoom
+        self.char_h *= zoom
 
         self.textCache = {}
 
-    def drawText(self, output, text, x=None, y=None, fgcolor=None, bgcolor=None, blink=False):
-        global tick
-        if blink:
-            if tick % 90 >= 45:
-                return
+    def initColor(self, c):
+        f = pygame.transform.scale(self.font, (self.char_w * NUM_CHARS, self.char_h))
+        f.fill(c, special_flags=pygame.BLEND_MULT)
+        self.fonts[c] = f
 
+    def drawText(self, output, text, x=None, y=None, fgcolor=None, bgcolor=None):
         if x is None:
             x = self.lastxpos
         if y is None:
@@ -50,49 +51,53 @@ class BitmapFont(object):
         else:
             self.lastcolor = fgcolor
 
-        if UPPERCASE_MODE:
-            text = text.upper()
-
         if bgcolor is not None:
-            output.fill(bgcolor, (x * self.font_w,
-                                 (y * self.font_h),
-                                 len(text) * self.font_w,
-                                 (self.font_h))
+            output.fill(bgcolor, (x * self.char_w,
+                                 (y * self.char_h),
+                                 len(text) * self.char_w,
+                                 (self.char_h))
                                  )
+
+        if fgcolor not in self.fonts:
+            self.initColor(fgcolor)
 
         if TEXT_CACHING:
             key = (text, fgcolor, bgcolor)
 
             if key not in self.textCache:
-                cacheSurface = pygame.Surface((len(text) * self.font_w, self.font_h), flags=pygame.SRCALPHA)
+                cacheSurface = pygame.Surface((len(text) * self.char_w, self.char_h), flags=pygame.SRCALPHA)
 
                 for i, c in enumerate(text):
-                    grabx = (ord(c) - 32) * self.font_w
-                    blitx = i * self.font_w
-                    blity = (self.font_h - self.font_h + 1) / 2
+                    grabx = (ord(c) - 32) * self.char_w
+                    blitx = i * self.char_w
+                    blity = (self.char_h - self.char_h + 1) / 2
 
-                    cacheSurface.blit(self.fonts[fgcolor], (blitx, blity), (grabx, 0, self.font_w, self.font_h))
+                    cacheSurface.blit(self.fonts[fgcolor], (blitx, blity), (grabx, 0, self.char_w, self.char_h))
                     self.textCache[key] = cacheSurface
             else:
                 cacheSurface = self.textCache[key]
 
-            blitx = x * self.font_w
-            blity = y * self.font_h + (self.font_h - self.font_h + 1) / 2
+            blitx = x * self.char_w
+            blity = y * self.char_h + (self.char_h - self.char_h + 1) / 2
             output.blit(cacheSurface, (blitx, blity))
         else:
             for i, c in enumerate(text):
-                grabx = (ord(c) - 32) * self.font_w
-                blitx = (x + i) * self.font_w
-                blity = y * self.font_h + (self.font_h - self.font_h + 1) / 2
+                grabx = (ord(c) - 32) * self.char_w
+                blitx = (x + i) * self.char_w
+                blity = y * self.char_h + (self.char_h - self.char_h + 1) / 2
 
-                output.blit(self.fonts[fgcolor], (blitx, blity), (grabx, 0, self.font_w, self.font_h))
+                output.blit(self.fonts[fgcolor], (blitx, blity), (grabx, 0, self.char_w, self.char_h))
 
         self.lastxpos = x
         self.lastypos = y + 1
 
-    def centerText(self, output, text, y=None, fgcolor=None, bgcolor=None, blink=False):
-        x = ((self.scr_w / self.font_w) - len(text)) / 2
-        self.drawText(output, text, x, y, fgcolor, bgcolor, blink)
+    def centerText(self, output, text, y=None, fgcolor=None, bgcolor=None, align=True):
+        if align:
+            x = ((self.scr_w // self.char_w) - len(text) +1) // 2
+        else:
+            x = ((self.scr_w // self.char_w) - len(text)) / 2
+
+        self.drawText(output, text, x, y, fgcolor, bgcolor)
 
     def locate(self, x=None, y=None):
         if x is not None:

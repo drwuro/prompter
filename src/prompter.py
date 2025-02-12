@@ -67,11 +67,13 @@ pygame.display.init()
 screen = pygame.display.set_mode((SCR_W, SCR_H), flags=pygame.SCALED if SCALED else 0)
 
 font = bitmapfont.BitmapFont('gfx/moonfont.png', 
-                             font_w=FONT_W,
-                             font_h=FONT_H,
-                             colors=COLORS,
+                             char_w=FONT_W,
+                             char_h=FONT_H,
                              zoom=1,
                              scr_w=SCR_W, scr_h=SCR_H)
+
+for color in COLORS:
+    font.initColor(color)
 
 pages = {}
 current_page = 'DEFAULT'
