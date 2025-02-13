@@ -466,6 +466,41 @@ def drawShutdown():
     font.drawText(screen, ' NO  ', x=SCR_W//FONT_W - 10, y=6, fgcolor=COLORS[1], bgcolor=COLORS[11])
 
 
+
+try:
+    midi_out = pygame.midi.Output(2)
+except:
+    showError('no midi output device')
+    midi_out = None
+
+
+def sendCommand(cmd):
+    global midi_out
+    
+    if cmd == 'next':
+        midi_out.note_on(36, 0x7F, 15)
+        midi_out.note_on(37, 0x7F, 15)
+    elif cmd == 'mute1':
+        midi_out.note_on(38, 0x7F, 15)
+        midi_out.note_on(39, 0x7F, 15)
+        midi_out.note_on(40, 0x7F, 15)
+        midi_out.note_on(41, 0x7F, 15)
+    elif cmd == 'mute2':
+        midi_out.note_off(38, 0x7F, 15)
+        midi_out.note_off(39, 0x7F, 15)
+        midi_out.note_off(40, 0x7F, 15)
+        midi_out.note_off(41, 0x7F, 15)
+    elif cmd == 'mute3':
+        midi_out.note_on(38, 0x7F, 15)
+        midi_out.note_off(39, 0x7F, 15)
+        midi_out.note_off(40, 0x7F, 15)
+        midi_out.note_off(41, 0x7F, 15)
+    
+#    midi_out.write([[0x9F, 36, 0x7F],
+#                    [0x9F, 37, 0x7F],
+#                   ])
+
+
 loadData()
 running = True
 bgcolor = COLORS[5]
@@ -518,6 +553,15 @@ try:
                 if e.key == pygame.K_LEFT:
                     prevPage()
 
+                if e.key == pygame.K_F5:
+                    sendCommand('next')
+                if e.key == pygame.K_F6:
+                    sendCommand('mute1')
+                if e.key == pygame.K_F7:
+                    sendCommand('mute2')
+                if e.key == pygame.K_F8:
+                    sendCommand('mute3')
+
                 if e.key == pygame.K_F11:
                     pygame.display.toggle_fullscreen()
 
@@ -550,7 +594,8 @@ try:
                         elif xpos > SCR_W - FONT_W * 10 and xpos < SCR_W - FONT_W * 5:
                             mode = 'NORMAL'
                         
-            elif e.type == pygame.MOUSEBUTTONDOWN or e.type == pygame.MOUSEMOTION:
+            elif e.type == pygame.MOUSEBUTTONDOWN:# or e.type == pygame.MOUSEMOTION:
+                print(e)
                 if mode == 'PLAY':
                     xpos, ypos = getMousePos(e)
 
