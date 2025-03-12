@@ -88,6 +88,9 @@ def loadData():
                     pages[page_id].append(line)
 
 
+# --
+
+
 class MainScreen(wurolib.Screen):
     def __init__(self, context):
         super().__init__(context)
@@ -283,6 +286,9 @@ class MainScreen(wurolib.Screen):
         self.cmdQueue.clear()
 
 
+# --
+
+
 class PlayScreen(wurolib.Screen):
     def __init__(self, context):
         super().__init__(context)
@@ -342,6 +348,9 @@ class PlayScreen(wurolib.Screen):
         self.font.drawText(self.output, ' PLAY ', x=SCR_W//FONT_W - 7, y=LAST_LINE, fgcolor=COLORS[1], bgcolor=COLORS[14])
 
 
+# --
+
+
 class ShutdownScreen(wurolib.Screen):
     def __init__(self, context):
         super().__init__(context)
@@ -357,6 +366,9 @@ class ShutdownScreen(wurolib.Screen):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 mainApp.quit()
+
+
+# --
 
 
 def consoleCommands(cmd):
