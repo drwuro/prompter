@@ -11,6 +11,8 @@ from midi import MidiThread
 from audio import AudioThread
 
 
+DEBUG = not True
+
 SCR_W = 160
 SCR_H = 106
 
@@ -176,7 +178,7 @@ class MainScreen(wurolib.Screen):
                     return
                 
                 if cmd_id in pageCmds[self.currentPage]:
-                    print(pageCmds[self.currentPage][cmd_id])
+                    self.runCommand(pageCmds[self.currentPage][cmd_id])
                 else:
                     print('page command %s not defined' % cmd_id)
 
@@ -209,6 +211,59 @@ class MainScreen(wurolib.Screen):
             self.selectPage(pagename)
         except:
             showError('already on first page')
+            
+    def runCommand(self, cmd):
+        cmds = cmd.split()
+        
+        for cmd in cmds:
+            if cmd.startswith('mute'):
+                _cmd, channel = cmd.split('=')
+                if not midiThread.sendMute(int(channel)):
+                    showError('%s failed' % cmd)
+                
+            elif cmd.startswith('unmute'):
+                _cmd, channel = cmd.split('=')
+                if not midiThread.sendUnmute(int(channel)):
+                    showError('%s failed' % cmd)
+            
+            elif cmd.startswith('only'):
+                _cmd, channels = cmd.split('=')
+                channels = channels.split(',')
+                
+                unmutes = [int(c) for c in channels]
+                mutes = list(range(1,17))
+                for c in unmutes:
+                    mutes.remove(c)
+                
+                for c in unmutes:
+                    if not midiThread.sendUnmute(c):
+                        showError('%s failed' % cmd)
+                for c in mutes:
+                    if not midiThread.sendMute(c):
+                        showError('%s failed' % cmd)
+                        
+            elif cmd.startswith('not'):
+                _cmd, channels = cmd.split('=')
+                channels = channels.split(',')
+                
+                mutes = [int(c) for c in channels]
+                unmutes = list(range(1,17))
+                for c in mutes:
+                    unmutes.remove(c)
+                
+                for c in unmutes:
+                    if not midiThread.sendUnmute(c):
+                        showError('%s failed' % cmd)
+                for c in mutes:
+                    if not midiThread.sendMute(c):
+                        showError('%s failed' % cmd)
+                        
+            elif cmd.startswith('next'):
+                if not midiThread.sendNextSequence():
+                    showError('%s failed' % cmd)
+
+            elif cmd.startswith('console'):
+                toggleConsole()
 
 
 class PlayScreen(wurolib.Screen):
@@ -305,6 +360,12 @@ def consoleCommands(cmd):
     elif cmd == 'pages':
         for pagename in list(pages.keys()):
             print('- %s' % pagename)
+            
+    elif cmd == 'show':
+        if args:
+            mainScreen.selectPage(args[0])
+        else:
+            mainScreen.selectPage('DEFAULT')
 
     elif cmd in ('exit', 'quit', 'bye'):
         print('good bye.')
@@ -373,7 +434,7 @@ def initScreens():
     mainScreen = MainScreen(context)
     playScreen = PlayScreen(context)
     shutdownScreen = ShutdownScreen(context)
-    consoleScreen = wurolib.Console(context, wrap=True, interactive=True, callback=consoleCommands)
+    consoleScreen = wurolib.Console(context, wrap=True, interactive=True, callback=consoleCommands, bgcolor=(0, 0, 0, 128))
 
     currentScreen = mainScreen
 
@@ -438,6 +499,9 @@ mainApp.registerGlobalEvent(pygame.KEYDOWN, pygame.K_F12, toggleConsole)
 mainApp.registerGlobalEvent(pygame.KEYDOWN, pygame.K_F1, switchToMain)
 mainApp.registerGlobalEvent(pygame.KEYDOWN, pygame.K_F2, switchToPlay)
 mainApp.registerGlobalEvent(pygame.KEYDOWN, pygame.K_ESCAPE, switchToShutdown)
+
+if DEBUG:
+    toggleConsole()
 
 try:
     mainApp.run()

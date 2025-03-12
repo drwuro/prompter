@@ -1,4 +1,4 @@
-import pygame
+import pygame.midi
 import threading
 import time
 
@@ -6,6 +6,8 @@ import time
 
 class MidiThread:
     def __init__(self, pageCallback=lambda:None):
+        pygame.midi.init()
+        
         try:
             self.midi_in = pygame.midi.Input(3) 
         except:
@@ -66,10 +68,25 @@ class MidiThread:
 
             else:
                 time.sleep(0.1)
-
+    
     def sendMute(self, channel):
-        midi_out.note_on(38 + (channel -1), 0x7F, 15)
+        if self.midi_out is None:
+            return False
+            
+        self.midi_out.note_on(38 + (channel -1), 0x7F, 15)
+        return True
     
     def sendUnmute(self, channel):
-        midi_out.note_off(38 + (channel -1), 0x7F, 15)
+        if self.midi_out is None:
+            return False
+            
+        self.midi_out.note_off(38 + (channel -1), 0x7F, 15)
+        return True
+        
+    def sendNextSequence(self):
+        if self.midi_out is None:
+            return False
+            
+        self.midi_out.note_on(37, 0x7F, 15)
+        return True
     

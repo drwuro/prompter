@@ -8,7 +8,7 @@ v2.0
 
 ---
 
-PAGE: WURST
+PAGE: WINT
 -----------
 
 dies ist
@@ -20,6 +20,23 @@ BGCOLOR:8 >(Wurst-Page)<
 CMD:1 mute=1 mute=2 unmute=4
 CMD:2 wurz
 CMD:3 gurz
-CMD:4 hurz
+CMD:4 console
+
+---
+
+
+PAGE: LABY
+----------
+
+Labyrinth
+
+BGCOLOR:0 -------------------------
+BGCOLOR:0 BRK | VERS | CHRS | B.OFF
+BGCOLOR:0 ------------------------- 
+
+CMD:1 only=1
+CMD:2 only=1,2,9
+CMD:3 next
+CMD:4 not=9
 
 ---
