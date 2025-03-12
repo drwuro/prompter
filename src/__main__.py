@@ -95,7 +95,9 @@ class MainScreen(wurolib.Screen):
     def __init__(self, context):
         super().__init__(context)
         self.currentPage = 'DEFAULT'
+        
         self.cmdQueue = []
+        self.cmdQueuePage = None
 
     def render(self):
         self.output.fill(COLORS[6])
@@ -284,6 +286,11 @@ class MainScreen(wurolib.Screen):
     def sendQueuedCommands(self):
         if DEBUG:
             print('%s queued commands' % len(self.cmdQueue))
+            
+        if not self.cmdQueue:
+            return
+            
+        if DEBUG:
             print('curPage=%s/cmdPage=%s' % (self.currentPage, self.cmdQueuePage))
             
         if self.currentPage == self.cmdQueuePage:
@@ -446,7 +453,14 @@ def consoleCommands(cmd):
         global SCR_W, SCR_H
         SCR_W = 160 * size
         SCR_H = 106 * size
-        initScreens()
+        fontzoom = 1
+        
+        if size == 2:       # special case for rpi3 display
+            SCR_W = 480
+            SCR_H = 320
+            fontzoom = 2
+        
+        initScreens(fontzoom)
 
         print('new resolution: %sx%s' % (SCR_W, SCR_H))
         print('console dimensions: %sx%s' % (consoleScreen.charsPerLine, consoleScreen.maxLines))
@@ -469,13 +483,13 @@ playScreen = None
 shutdownScreen = None
 consoleScreen = None
 
-def initScreens():
+def initScreens(fontzoom=1):
     global mainScreen, playScreen, shutdownScreen, consoleScreen
     global currentScreen
         
     font = wurolib.BitmapFont(filename='gfx/moonfont.png',
                               char_w=FONT_W, char_h=FONT_H,
-                              zoom=1,
+                              zoom=fontzoom,
                               scr_w=SCR_W, scr_h=SCR_H
                               )
     
@@ -524,13 +538,16 @@ def switchToShutdown():
     global shutdownScreen, currentScreen
     mainApp.setScreen(shutdownScreen)
     currentScreen = mainScreen
+    
+def pageCallback(pagename):
+    mainScreen.selectPage(pagename)
 
 
 # -- initialization of threads and pages
 
 loadData()
 
-midiThread = MidiThread(pageCallback=mainScreen.selectPage)
+midiThread = MidiThread(pageCallback=pageCallback)
 midiThread.start()
 
 audioThread = AudioThread(outPath=getPath())
