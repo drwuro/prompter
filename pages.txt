@@ -4,8 +4,22 @@ PAGE: DEFAULT
 ZeHa's toller
 kleiner Teleprompter
 
-v1.0
+v2.0
 
 ---
 
+PAGE: WURST
+-----------
 
+dies ist
+die grandiose
+
+BGCOLOR:8 >(Wurst-Page)<
+
+
+CMD:1 mute=1 mute=2 unmute=4
+CMD:2 wurz
+CMD:3 gurz
+CMD:4 hurz
+
+---
