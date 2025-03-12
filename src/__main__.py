@@ -92,6 +92,7 @@ class MainScreen(wurolib.Screen):
     def __init__(self, context):
         super().__init__(context)
         self.currentPage = 'DEFAULT'
+        self.cmdQueue = []
 
     def render(self):
         self.output.fill(COLORS[6])
@@ -186,6 +187,7 @@ class MainScreen(wurolib.Screen):
         if pagename.strip() in pages:
             self.currentPage = pagename.strip()
             showError(None)
+            self.sendQueuedCommands()
         else:
             showError('page %s not found' % pagename.strip())
 
@@ -215,16 +217,17 @@ class MainScreen(wurolib.Screen):
     def runCommand(self, cmd):
         cmds = cmd.split()
         
+        wait = False
+        cmdQueue = []
+        
         for cmd in cmds:
             if cmd.startswith('mute'):
                 _cmd, channel = cmd.split('=')
-                if not midiThread.sendMute(int(channel)):
-                    showError('%s failed' % cmd)
+                cmdQueue.append((midiThread.sendMute, int(channel)))
                 
             elif cmd.startswith('unmute'):
                 _cmd, channel = cmd.split('=')
-                if not midiThread.sendUnmute(int(channel)):
-                    showError('%s failed' % cmd)
+                cmdQueue.append((midiThread.sendUnmute, int(channel)))
             
             elif cmd.startswith('only'):
                 _cmd, channels = cmd.split('=')
@@ -236,11 +239,9 @@ class MainScreen(wurolib.Screen):
                     mutes.remove(c)
                 
                 for c in unmutes:
-                    if not midiThread.sendUnmute(c):
-                        showError('%s failed' % cmd)
+                    cmdQueue.append((midiThread.sendUnmute, c))
                 for c in mutes:
-                    if not midiThread.sendMute(c):
-                        showError('%s failed' % cmd)
+                    cmdQueue.append((midiThread.sendMute, c))
                         
             elif cmd.startswith('not'):
                 _cmd, channels = cmd.split('=')
@@ -252,18 +253,34 @@ class MainScreen(wurolib.Screen):
                     unmutes.remove(c)
                 
                 for c in unmutes:
-                    if not midiThread.sendUnmute(c):
-                        showError('%s failed' % cmd)
+                    cmdQueue.append((midiThread.sendUnmute, c))
                 for c in mutes:
-                    if not midiThread.sendMute(c):
-                        showError('%s failed' % cmd)
+                    cmdQueue.append((midiThread.sendMute, c))
                         
             elif cmd.startswith('next'):
                 if not midiThread.sendNextSequence():
                     showError('%s failed' % cmd)
+                    
+            elif cmd.startswith('wait'):
+                wait = True
 
             elif cmd.startswith('console'):
                 toggleConsole()
+                
+        
+        self.cmdQueue = cmdQueue
+        self.cmdQueuePage = self.currentPage
+        
+        if not wait:
+            self.sendQueuedCommands()
+            
+    def sendQueuedCommands(self):
+        if self.currentPage == self.cmdQueuePage:
+            for cmd, arg in self.cmdQueue:
+                if not cmd(arg):
+                    showError('%s(%s) failed' % (cmd.__name__, arg))
+                
+        self.cmdQueue.clear()
 
 
 class PlayScreen(wurolib.Screen):

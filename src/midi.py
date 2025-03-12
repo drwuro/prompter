@@ -2,6 +2,7 @@ import pygame.midi
 import threading
 import time
 
+from wurolib import print
 
 
 class MidiThread:
