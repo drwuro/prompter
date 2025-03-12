@@ -189,6 +189,10 @@ class MainScreen(wurolib.Screen):
     def selectPage(self, pagename):
         if pagename.strip() in pages:
             self.currentPage = pagename.strip()
+            
+            if DEBUG:
+                print('selected page', self.currentPage)
+                
             showError(None)
             self.sendQueuedCommands()
         else:
@@ -278,10 +282,17 @@ class MainScreen(wurolib.Screen):
             self.sendQueuedCommands()
             
     def sendQueuedCommands(self):
+        if DEBUG:
+            print('%s queued commands' % len(self.cmdQueue))
+            print('curPage=%s/cmdPage=%s' % (self.currentPage, self.cmdQueuePage))
+            
         if self.currentPage == self.cmdQueuePage:
             for cmd, arg in self.cmdQueue:
                 if not cmd(arg):
                     showError('%s(%s) failed' % (cmd.__name__, arg))
+        else:
+            if DEBUG:
+                print('different page!')
                 
         self.cmdQueue.clear()
 
@@ -384,7 +395,14 @@ def consoleCommands(cmd):
         return
 
     if cmd == 'help':
-        print('no help available')
+        print('pages')
+        print('show [PAGE]')
+        print('rec')
+        print('play')
+        print('stop')
+        print('size [N]')
+        print('debug')
+        print('exit/quit/bye')
 
     elif cmd == 'pages':
         for pagename in list(pages.keys()):
@@ -434,6 +452,12 @@ def consoleCommands(cmd):
         print('console dimensions: %sx%s' % (consoleScreen.charsPerLine, consoleScreen.maxLines))
 
         mainApp.setScreen(consoleScreen)
+
+    elif cmd == 'debug':
+        global DEBUG
+        DEBUG = not DEBUG
+        print('debug mode is', ['OFF','ON'][DEBUG])
+
     else:
         print('unknown command')
 
