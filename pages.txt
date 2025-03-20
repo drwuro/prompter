@@ -35,8 +35,8 @@ BGCOLOR:0 BRK | VERS | CHRS | B.OFF
 BGCOLOR:0 ------------------------- 
 
 CMD:1 only=1
-CMD:2 only=1,2,9
+CMD:2 wait only=1,2,9
 CMD:3 next
-CMD:4 wait not=9
+CMD:4 not=9
 
 ---
