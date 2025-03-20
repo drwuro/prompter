@@ -12,6 +12,14 @@ from audio import AudioThread
 
 
 DEBUG = not True
+ROTATED_DISPLAY = True
+
+MIN_X = 3936
+MAX_X = 227
+MIN_Y = 268
+MAX_Y = 3880
+
+####
 
 SCR_W = 160
 SCR_H = 106
@@ -56,6 +64,21 @@ def getPath():
 
     return path    
 
+def getMousePos(e):        
+    xpos = (e.pos[1] - MIN_X) / (MAX_X - MIN_X) * SCR_W
+    ypos = (e.pos[0] - MIN_Y) / (MAX_Y - MIN_Y) * SCR_H
+    
+    if ROTATED_DISPLAY:
+        xpos = SCR_W - xpos
+        ypos = SCR_H - ypos
+
+    return xpos, ypos
+
+def getMousePosRaw(e):
+    xpos = e.pos[1]
+    ypos = e.pos[0]
+
+    return xpos, ypos
 
 pages = {}
 pageCmds = {}
@@ -99,6 +122,12 @@ class MainScreen(wurolib.Screen):
         self.cmdQueue = []
         self.cmdQueuePage = None
 
+        self.lastMousePos = (0, 0)
+        self.lastMousePosRaw = (0, 0)
+        self.lastClickPos = (0, 0)
+
+        self.debounceRecording = False
+
     def render(self):
         self.output.fill(COLORS[6])
 
@@ -129,7 +158,14 @@ class MainScreen(wurolib.Screen):
                 color, line = line[8:].strip().split(' ', 1)
                 fgcolor = COLORS[int(color)]
                 
+            elif line.startswith(':MOUSEPOS'):
+                self.font.centerText(self.output, '%i / %i' % self.lastMousePos, fgcolor=COLORS[1])
+                self.font.centerText(self.output, '%i / %i' % self.lastMousePosRaw, fgcolor=COLORS[1])
+                self.font.centerText(self.output, '%i / %i' % self.lastClickPos, fgcolor=COLORS[10])
+                line = ''
+
             self.font.centerText(self.output, line, fgcolor=fgcolor, bgcolor=bgcolor)
+
 
     def drawRecLabel(self):
         if audioThread.isRecording():
@@ -188,6 +224,30 @@ class MainScreen(wurolib.Screen):
                 else:
                     print('page command %s not defined' % cmd_id)
 
+        elif event.type == pygame.MOUSEBUTTONUP:
+            xpos, ypos = getMousePos(event)
+
+            if xpos < FONT_W * 7 and ypos > SCR_H - FONT_H * 2:
+                if not self.debounceRecording:
+                    if not audioThread.isRecording():
+                        audioThread.startRecording()
+                    else:
+                        audioThread.stopRecording()
+                        
+                    self.debounceRecording = True
+
+                    self.lastClickPos = getMousePos(event)
+
+            elif xpos < FONT_W * 7 and ypos < FONT_H * 2:
+                switchToShutdown()
+
+        elif event.type == pygame.MOUSEMOTION:
+            self.lastMousePos = getMousePos(event)
+            self.lastMousePosRaw = getMousePosRaw(event)
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            self.debounceRecording = False
+
     def selectPage(self, pagename):
         if pagename.strip() in pages:
             self.currentPage = pagename.strip()
@@ -196,7 +256,15 @@ class MainScreen(wurolib.Screen):
                 print('selected page', self.currentPage)
                 
             showError(None)
-            self.sendQueuedCommands()
+
+            if self.cmdQueue:
+                if self.currentPage == self.cmdQueuePage:
+                    self.sendCommands(self.cmdQueue)
+                else:
+                    if DEBUG:
+                        print('different page!')
+
+                self.cmdQueue.clear()
         else:
             showError('page %s not found' % pagename.strip())
 
@@ -231,12 +299,18 @@ class MainScreen(wurolib.Screen):
         
         for cmd in cmds:
             if cmd.startswith('mute'):
-                _cmd, channel = cmd.split('=')
-                cmdQueue.append((midiThread.sendMute, int(channel)))
+                _cmd, channels = cmd.split('=')
+                channels = channels.split(',')
+
+                for channel in channels:
+                    cmdQueue.append((midiThread.sendMute, int(channel)))
                 
             elif cmd.startswith('unmute'):
-                _cmd, channel = cmd.split('=')
-                cmdQueue.append((midiThread.sendUnmute, int(channel)))
+                _cmd, channels = cmd.split('=')
+                channels = channels.split(',')
+
+                for channel in channels:
+                    cmdQueue.append((midiThread.sendUnmute, int(channel)))
             
             elif cmd.startswith('only'):
                 _cmd, channels = cmd.split('=')
@@ -269,38 +343,39 @@ class MainScreen(wurolib.Screen):
             elif cmd.startswith('next'):
                 if not midiThread.sendNextSequence():
                     showError('%s failed' % cmd)
+
+            elif cmd.startswith('prev'):
+                if not midiThread.sendPrevSequence():
+                    showError('%s failed' % cmd)
                     
             elif cmd.startswith('wait'):
                 wait = True
+                self.sendCommands(cmdQueue)
+                cmdQueue = []
 
             elif cmd.startswith('console'):
                 toggleConsole()
                 
         
-        self.cmdQueue = cmdQueue
-        self.cmdQueuePage = self.currentPage
-        
         if not wait:
-            self.sendQueuedCommands()
-            
-    def sendQueuedCommands(self):
-        if DEBUG:
-            print('%s queued commands' % len(self.cmdQueue))
-            
-        if not self.cmdQueue:
-            return
-            
-        if DEBUG:
-            print('curPage=%s/cmdPage=%s' % (self.currentPage, self.cmdQueuePage))
-            
-        if self.currentPage == self.cmdQueuePage:
-            for cmd, arg in self.cmdQueue:
-                if not cmd(arg):
-                    showError('%s(%s) failed' % (cmd.__name__, arg))
+            self.sendCommands(cmdQueue)
         else:
-            if DEBUG:
-                print('different page!')
-                
+            self.cmdQueue = cmdQueue
+            self.cmdQueuePage = self.currentPage
+            
+    def sendCommands(self, queue):
+        if DEBUG:
+            print('%s queued commands' % len(queue))
+            
+        for cmd, arg in set(queue):
+            if not cmd(arg):
+                showError('%s(%s) failed' % (cmd.__name__, arg))
+
+    def sync(self):
+        if DEBUG:
+            print('received sync')
+
+        self.sendCommands(self.cmdQueue)
         self.cmdQueue.clear()
 
 
@@ -384,6 +459,16 @@ class ShutdownScreen(wurolib.Screen):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 mainApp.quit()
+
+        elif event.type == pygame.MOUSEBUTTONUP:
+            xpos, ypos = getMousePos(event)
+
+            if ypos > FONT_H * 6 and ypos < FONT_H * (6 + 1):
+                if xpos > FONT_W * 5 and xpos < FONT_W * 10:
+                    mainApp.quit()
+
+                elif xpos > SCR_W - FONT_W * 10 and xpos < SCR_W - FONT_W * 5:
+                    switchToMain()
 
 
 # --
@@ -542,12 +627,15 @@ def switchToShutdown():
 def pageCallback(pagename):
     mainScreen.selectPage(pagename)
 
+def syncCallback():
+    mainScreen.sync()
+
 
 # -- initialization of threads and pages
 
 loadData()
 
-midiThread = MidiThread(pageCallback=pageCallback)
+midiThread = MidiThread(pageCallback=pageCallback, syncCallback=syncCallback)
 midiThread.start()
 
 audioThread = AudioThread(outPath=getPath())
@@ -576,6 +664,12 @@ if DEBUG:
 try:
     mainApp.run()
 finally:
+    import traceback
+
+    with open('prompter.log', 'w') as f:
+        f.writelines(['%s\n' % line for line in wurolib.printLog])
+        f.write(traceback.format_exc())
+
     midiThread.stop()
     audioThread.stop()
 

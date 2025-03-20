@@ -6,7 +6,7 @@ from wurolib import print
 
 
 class MidiThread:
-    def __init__(self, pageCallback=lambda:None):
+    def __init__(self, pageCallback=lambda:None, syncCallback=lambda:None):
         pygame.midi.init()
         
         try:
@@ -23,6 +23,7 @@ class MidiThread:
         self.thread = threading.Thread(target=self._run)
 
         self.pageCallback = pageCallback
+        self.syncCallback = syncCallback
 
     def start(self):
         self.running = True
@@ -66,6 +67,8 @@ class MidiThread:
                             if 0xF7 in cmd:
                                 next = False
                                 self.pageCallback(pagename)
+                        elif cmd[0] == 0x9F: # note on, channel 16
+                            self.syncCallback()
 
             else:
                 time.sleep(0.1)
@@ -89,5 +92,12 @@ class MidiThread:
             return False
             
         self.midi_out.note_on(37, 0x7F, 15)
+        return True
+    
+    def sendPrevSequence(self):
+        if self.midi_out is None:
+            return False
+            
+        self.midi_out.note_on(36, 0x7F, 15)
         return True
     
