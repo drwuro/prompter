@@ -129,17 +129,17 @@ class MainScreen(wurolib.Screen):
         self.debounceRecording = False
 
     def render(self):
-        self.output.fill(COLORS[6])
+        self.context.fill(COLORS[6])
 
         self.drawPage()
         self.drawRecLabel()
         self.drawMeters()
 
         if error_message:
-            self.font.centerText(self.output, error_message, y=LAST_LINE-1, fgcolor=COLORS[1], bgcolor=COLORS[2])
+            self.context.center(error_message, y=LAST_LINE-1, fgcolor=COLORS[1], bgcolor=COLORS[2])
 
     def drawPage(self):
-        self.font.locate(0, 0.5)
+        self.context.locate(0, 0.5)
         for line in pages[self.currentPage]:
             bgcolor = None
             fgcolor = COLORS[1]
@@ -159,23 +159,23 @@ class MainScreen(wurolib.Screen):
                 fgcolor = COLORS[int(color)]
                 
             elif line.startswith(':MOUSEPOS'):
-                self.font.centerText(self.output, '%i / %i' % self.lastMousePos, fgcolor=COLORS[1])
-                self.font.centerText(self.output, '%i / %i' % self.lastMousePosRaw, fgcolor=COLORS[1])
-                self.font.centerText(self.output, '%i / %i' % self.lastClickPos, fgcolor=COLORS[10])
+                self.context.center('%i / %i' % self.lastMousePos, fgcolor=COLORS[1])
+                self.context.center('%i / %i' % self.lastMousePosRaw, fgcolor=COLORS[1])
+                self.context.center('%i / %i' % self.lastClickPos, fgcolor=COLORS[10])
                 line = ''
 
-            self.font.centerText(self.output, line, fgcolor=fgcolor, bgcolor=bgcolor)
+            self.context.center(line, fgcolor=fgcolor, bgcolor=bgcolor)
 
 
     def drawRecLabel(self):
         if audioThread.isRecording():
             # show rec label
             if (time.time() * 1000) % 1000 > 500:
-                self.font.drawText(self.output, ' `REC ', x=0.5, y=LAST_LINE, fgcolor=COLORS[1], bgcolor=COLORS[2])
+                self.context.print(' `REC ', x=0.5, y=LAST_LINE, fgcolor=COLORS[1], bgcolor=COLORS[2])
             else:
-                self.font.drawText(self.output, ' `REC ', x=0.5, y=LAST_LINE, fgcolor=COLORS[10], bgcolor=COLORS[2])
+                self.context.print(' `REC ', x=0.5, y=LAST_LINE, fgcolor=COLORS[10], bgcolor=COLORS[2])
         else:
-            self.font.drawText(self.output, '  REC ', x=0.5, y=LAST_LINE, fgcolor=COLORS[15], bgcolor=COLORS[14])
+            self.context.print('  REC ', x=0.5, y=LAST_LINE, fgcolor=COLORS[15], bgcolor=COLORS[14])
             
     def drawMeters(self):
         scale = (SCR_W - 9*FONT_W) / 100
@@ -185,20 +185,20 @@ class MainScreen(wurolib.Screen):
 
         meter_left, meter_right, peak_left, peak_right = audioThread.getMeter()
         
-        pygame.draw.rect(self.output, COLORS[0], (MX -1, MY -1, math.floor(100 * scale) +2, 9))
-        pygame.draw.rect(self.output, COLORS[5], (MX,    MY,    meter_left * scale, 3))
-        pygame.draw.rect(self.output, COLORS[5], (MX,    MY +4, meter_right * scale, 3))
+        pygame.draw.rect(self.context.output, COLORS[0], (MX -1, MY -1, math.floor(100 * scale) +2, 9))
+        pygame.draw.rect(self.context.output, COLORS[5], (MX,    MY,    meter_left * scale, 3))
+        pygame.draw.rect(self.context.output, COLORS[5], (MX,    MY +4, meter_right * scale, 3))
             
         for clip, colorid in [(70, 7), (80, 2)]:
             if meter_left > clip:
-                pygame.draw.rect(self.output, COLORS[colorid], (MX + math.floor(clip * scale), MY, math.floor((meter_left - clip) * scale + (1 if colorid == 2 else 0)), 3))
+                pygame.draw.rect(self.context.output, COLORS[colorid], (MX + math.floor(clip * scale), MY, math.floor((meter_left - clip) * scale + (1 if colorid == 2 else 0)), 3))
             if meter_right > clip:
-                pygame.draw.rect(self.output, COLORS[colorid], (MX + math.floor(clip * scale), MY +4, math.floor((meter_right - clip) * scale + (1 if colorid == 2 else 0)), 3))
+                pygame.draw.rect(self.context.output, COLORS[colorid], (MX + math.floor(clip * scale), MY +4, math.floor((meter_right - clip) * scale + (1 if colorid == 2 else 0)), 3))
         
         if peak_left:
-            pygame.draw.rect(self.output, COLORS[14 if peak_left < 99 else 10], (math.floor(MX + peak_left * scale), MY, 1, 3))
+            pygame.draw.rect(self.context.output, COLORS[14 if peak_left < 99 else 10], (math.floor(MX + peak_left * scale), MY, 1, 3))
         if peak_right:
-            pygame.draw.rect(self.output, COLORS[14 if peak_right < 99 else 10], (math.floor(MX + peak_right * scale), MY +4, 1, 3))
+            pygame.draw.rect(self.context.output, COLORS[14 if peak_right < 99 else 10], (math.floor(MX + peak_right * scale), MY +4, 1, 3))
 
     def event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -392,7 +392,7 @@ class PlayScreen(wurolib.Screen):
         self.fileList = self.getFiles()
 
     def render(self):
-        self.output.fill(COLORS[6])
+        self.context.fill(COLORS[6])
 
         self.drawFiles()
         self.drawPlayButton()
@@ -429,16 +429,16 @@ class PlayScreen(wurolib.Screen):
         return files
 
     def drawFiles(self):
-        self.font.locate(0, 0)
+        self.context.locate(0, 0)
 
         for i, filename in enumerate(self.fileList):
-            self.font.drawText(self.output, filename, x=0, fgcolor=COLORS[5 if i != self.selectedFile else 1], bgcolor=COLORS[0])
+            self.context.print(filename, x=0, fgcolor=COLORS[5 if i != self.selectedFile else 1], bgcolor=COLORS[0])
             
             if i == self.selectedFile:
                 self.playingFile = os.path.join(getPath(), filename)
 
     def drawPlayButton(self):
-        self.font.drawText(self.output, ' PLAY ', x=SCR_W//FONT_W - 7, y=LAST_LINE, fgcolor=COLORS[1], bgcolor=COLORS[14])
+        self.context.print(' PLAY ', x=SCR_W//FONT_W - 7, y=LAST_LINE, fgcolor=COLORS[1], bgcolor=COLORS[14])
 
 
 # --
@@ -449,11 +449,11 @@ class ShutdownScreen(wurolib.Screen):
         super().__init__(context)
 
     def render(self):
-        self.output.fill(COLORS[6])
+        self.context.fill(COLORS[6])
 
-        self.font.centerText(self.output, 'REALLY SHUTDOWN?', y=3, fgcolor=COLORS[1], bgcolor=COLORS[2])
-        self.font.drawText(self.output, ' YES ', x=5, y=6, fgcolor=COLORS[1], bgcolor=COLORS[11])
-        self.font.drawText(self.output, ' NO  ', x=SCR_W//FONT_W - 10, y=6, fgcolor=COLORS[1], bgcolor=COLORS[11])
+        self.context.center('REALLY SHUTDOWN?', y=3, fgcolor=COLORS[1], bgcolor=COLORS[2])
+        self.context.print(' YES ', x=5, y=6, fgcolor=COLORS[1], bgcolor=COLORS[11])
+        self.context.print(' NO  ', x=SCR_W//FONT_W - 10, y=6, fgcolor=COLORS[1], bgcolor=COLORS[11])
 
     def event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -575,7 +575,6 @@ def initScreens(fontzoom=1):
     font = wurolib.BitmapFont(filename='gfx/moonfont.png',
                               char_w=FONT_W, char_h=FONT_H,
                               zoom=fontzoom,
-                              scr_w=SCR_W, scr_h=SCR_H
                               )
     
     for color in COLORS:
